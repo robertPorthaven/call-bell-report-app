@@ -142,7 +142,7 @@ def get_token_provider(
     """
 
     def _provide() -> dict:
-        user_token = None #-> FIX Easy Auth setup!!!!!     _get_easy_auth_token()
+        user_token =  _get_easy_auth_token()
         if user_token:
             return _obo_token(user_token, client_id, client_secret, tenant_id)
         return _client_credentials_token(client_id, client_secret, tenant_id)
