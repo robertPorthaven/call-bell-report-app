@@ -1,0 +1,37 @@
+# --- Python build noise
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+.build/
+dist/
+
+# --- Local envs & editors
+.venv/
+venv/
+.env
+.vscode/
+.idea/
+*.code-workspace
+
+# --- VCS & misc
+.git
+.gitignore
+.gitattributes
+.DS_Store
+
+
+# --- If you log locally
+*.log
+
+# --- If you vendor large artifacts, keep them out by default
+# data/
+# models/
+
+# --- Never ignore the actual app files we need
+!app.py
+!requirements.txt
+!Dockerfile
+!common_sql.py
+!basic_reporter.py
