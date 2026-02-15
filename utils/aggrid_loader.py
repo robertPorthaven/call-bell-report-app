@@ -23,9 +23,10 @@ def load_pill_renderer() -> JsCode:
     })()
     """)
 
-def load_aggrid_css() -> dict[str, dict[str, str]]:
+def load_aggrid_css(theme_color) -> dict[str, dict[str, str]]:
     css = Path("assets/aggrid.css").read_text(encoding="utf-8")
     css = re.sub(r'/\*.*?\*/', '', css, flags=re.DOTALL)
+    css = css.replace('--theme-color--', theme_color)  # Replace with actual amber color
 
     result: dict[str, dict[str, str]] = {}
     for match in re.finditer(r'([^{]+)\{([^}]+)\}', css):

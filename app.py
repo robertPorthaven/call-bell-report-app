@@ -8,13 +8,17 @@
 
 from __future__ import annotations
 from datetime import datetime
-from st_aggrid import AgGrid, GridOptionsBuilder
 import pandas as pd
 import streamlit as st
 import config
 from auth.token_provider import get_token_provider
-from utils.aggrid_loader import load_pill_renderer, load_aggrid_css
 from utils.pills import render_event_pills
+from utils.components import render_call_grid
+
+# Define your color variables
+AMBER = "#f09c2e"
+OCEAN = "#3e6f86"
+SLATE = "#757a6e"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG  (must be the first Streamlit call)
@@ -26,7 +30,6 @@ st.set_page_config(
 )
 with open("assets/style.css", "r", encoding="utf-8") as css_file:
     st.write(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ENV VALIDATION
@@ -72,48 +75,6 @@ def load_open_calls(hours: int = 24) -> tuple[pd.DataFrame, datetime]:
     return df, datetime.now()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# UI SECTIONS
-# ─────────────────────────────────────────────────────────────────────────────
-def _render_open_calls(open_df: pd.DataFrame) -> None:
-    st.subheader(f"Active Open Calls")
-    st.caption("Times are displayed as Hours:Minutes:Seconds")
-
-    if open_df.empty:
-        return st.info("No OPEN calls.") # type: ignore
-
-    gb = GridOptionsBuilder.from_dataframe(open_df)
-    gb.configure_default_column(resizable=True, sortable=True, filter=False)  # filter off by default
-    gb.configure_column("Events", cellRenderer=load_pill_renderer(), minWidth=350)
-
-    # Only enable filter on columns where it makes sense
-    gb.configure_column("Room Location", filter=True)
-    gb.configure_column("Call Type", filter=True)
-
-    ROW_HEIGHT    = 48
-    HEADER_HEIGHT = 48
-    GRID_CHROME   = 10   # Extra space to prevent vertical scrollbar APPEARING
-    height = HEADER_HEIGHT + (len(open_df) * ROW_HEIGHT) + GRID_CHROME
-
-    gb.configure_grid_options(
-        enableCellTextSelection=True,
-        domLayout='normal',
-        suppressHorizontalScroll=True,
-        rowHeight=ROW_HEIGHT,
-        headerHeight=HEADER_HEIGHT,
-    )
-
-    AgGrid(
-        open_df,
-        gridOptions=gb.build(),
-        custom_css=load_aggrid_css(),
-        allow_unsafe_jscode=True,
-        theme="alpine",
-        height=height,
-        fit_columns_on_grid_load=True,
-    )
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # MAIN
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -135,14 +96,13 @@ try:
     st.title("Call Bell – 24‑hour Summary")
 
     df, updated_at = load_open_calls(24)
-
-    if df is None or df.empty:
-        st.info("No data found for the last 24 hours.")
-        st.stop()
-
     st.caption(f"Refreshed: {updated_at:%d/%m/%y %H:%M:%S}")
-    df["Events"] = render_event_pills(df["Events"])
-    _render_open_calls(df)
+    st.subheader("Active Open Calls")
+    # Convert event data to colour coded svgs and then draw the Open Call table
+    df["Events"] = render_event_pills(df["Events"]) 
+    render_call_grid(df, "open_calls_grid", theme_color=AMBER, )
+
+    render_call_grid(df, "ljkasdlksa ldksalk", theme_color=OCEAN)
 
 except Exception as exc:
     _fatal_page(exc)
