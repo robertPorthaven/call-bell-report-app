@@ -3,14 +3,15 @@ from st_aggrid import AgGrid, GridOptionsBuilder
 import streamlit as st
 from utils.aggrid_loader import load_aggrid_css, load_pill_renderer
 
-def render_call_grid(df, unique_key, theme_color="#757a6e"):
+def render_call_grid(df_in, unique_key, theme_color="#757a6e"):
     """
     Reusable grid component based on the original working amber style.
     """
-    if df.empty:
+    if df_in.empty:
         st.info("No data available.")
         return
-
+    df= df_in.copy()  # Avoid mutating original
+    
     gb = GridOptionsBuilder.from_dataframe(df)
     gb.configure_default_column(resizable=True, sortable=True, filter=False)
     
@@ -28,7 +29,6 @@ def render_call_grid(df, unique_key, theme_color="#757a6e"):
         rowHeight=ROW_HEIGHT,
         headerHeight=HEADER_HEIGHT,
     )
-
 
     AgGrid(
         df,
