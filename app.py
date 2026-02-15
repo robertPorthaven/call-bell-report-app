@@ -7,14 +7,14 @@
 # ─────────────────────────────────────────────────────────────────────────────
 
 from __future__ import annotations
-
 from datetime import datetime
-
+from st_aggrid import AgGrid, GridOptionsBuilder
 import pandas as pd
 import streamlit as st
-
 import config
 from auth.token_provider import get_token_provider
+from utils.aggrid_loader import load_pill_renderer, load_aggrid_css
+from utils.pills import render_event_pills
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PAGE CONFIG  (must be the first Streamlit call)
@@ -24,19 +24,9 @@ st.set_page_config(
     page_icon="assets/image.png",
     layout="wide",
 )
+with open("assets/style.css", "r", encoding="utf-8") as css_file:
+    st.write(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# EXTERNAL CSS
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _load_css(path: str) -> None:
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            st.markdown(f"<style>{fh.read()}</style>", unsafe_allow_html=True)
-    except FileNotFoundError:
-        pass  # non-fatal
-
-_load_css("assets/style.css")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ENV VALIDATION
@@ -72,27 +62,11 @@ def _fatal_page(exc: Exception) -> None:
     st.stop()
 
 # ─────────────────────────────────────────────────────────────────────────────
-# FORMATTING HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
-
-_TIME_COLS = {"waiting time", "care time", "total time", "emergency time"}
-
-def format_seconds(seconds) -> str:
-    if pd.isna(seconds):
-        return ""
-    h, rem = divmod(int(seconds), 3600)
-    m, s = divmod(rem, 60)
-    return f"{h}:{m:02d}:{s:02d}" if h else f"{m:02d}:{s:02d}"
-
-def is_time_column(col: str) -> bool:
-    return col.strip().lower() in _TIME_COLS
-
-# ─────────────────────────────────────────────────────────────────────────────
 # DATA LOADING
 # ─────────────────────────────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner=True, ttl=15)
-def load_data(hours: int = 24) -> tuple[pd.DataFrame, datetime]:
+@st.cache_data(show_spinner=True, ttl=5)
+def load_open_calls(hours: int = 24) -> tuple[pd.DataFrame, datetime]:
     q = f"SELECT * FROM [call_bell].[fn_report_app_data]({int(hours)})"
     df = st.session_state.sql_client.run_query(q)
     return df, datetime.now()
@@ -100,117 +74,44 @@ def load_data(hours: int = 24) -> tuple[pd.DataFrame, datetime]:
 # ─────────────────────────────────────────────────────────────────────────────
 # UI SECTIONS
 # ─────────────────────────────────────────────────────────────────────────────
-
-def _render_open_calls(df: pd.DataFrame, home_name: str) -> None:
-    st.subheader(f"{home_name} – Active Open Calls (Not Reset)")
-
-    if "Call Type" not in df.columns:
-        st.write("No OPEN calls.")
-        return
-
-    open_df = (
-        df[df["Call Type"].astype(str).str.contains("OPEN", case=False, na=False)]
-        .sort_values("Start Time")
-        .copy()
-    )
+def _render_open_calls(open_df: pd.DataFrame) -> None:
+    st.subheader(f"Active Open Calls")
+    st.caption("Times are displayed as Hours:Minutes:Seconds")
 
     if open_df.empty:
-        st.write("No OPEN calls.")
-        return
+        return st.info("No OPEN calls.") # type: ignore
 
-    open_df = open_df.drop(columns=["HomeName", "Emergency Time"], errors="ignore")
-    for col in open_df.columns:
-        if is_time_column(col):
-            open_df[col] = open_df[col].map(format_seconds)
-    if "Start Date" in open_df.columns:
-        open_df["Start Date"] = (
-            pd.to_datetime(open_df["Start Date"], errors="coerce")
-            .dt.strftime("%d/%m/%Y %H:%M:%S")
-        )
-    st.dataframe(open_df, width='stretch', hide_index=True)
+    gb = GridOptionsBuilder.from_dataframe(open_df)
+    gb.configure_default_column(resizable=True, sortable=True, filter=False)  # filter off by default
+    gb.configure_column("Events", cellRenderer=load_pill_renderer(), minWidth=350)
 
+    # Only enable filter on columns where it makes sense
+    gb.configure_column("Room Location", filter=True)
+    gb.configure_column("Call Type", filter=True)
 
-def _render_room_summary(df: pd.DataFrame) -> None:
-    st.divider()
-    st.subheader("Room Summary (last 24 hours)")
+    ROW_HEIGHT    = 48
+    HEADER_HEIGHT = 48
+    GRID_CHROME   = 10   # Extra space to prevent vertical scrollbar APPEARING
+    height = HEADER_HEIGHT + (len(open_df) * ROW_HEIGHT) + GRID_CHROME
 
-    # ── Normalise seconds columns ──
-    col_map = {
-        "Waiting Time": "WaitingSeconds",
-        "Care Time": "CareSeconds",
-        "Total Time": "TotalSeconds",
-        "Emergency Time": "EmergencySeconds",
-    }
-    for src, dst in col_map.items():
-        df[dst] = df[src] if src in df.columns else 0
-
-    for key in ["HomeName", "Room Location"]:
-        df[key] = df.get(key, pd.Series(dtype=str)).fillna("Unknown")
-
-    group_keys = ["HomeName", "Room Location"]
-
-    def pct95(s: pd.Series) -> int:
-        return int(s.quantile(0.95)) if len(s) else 0
-
-    agg_df = (
-        df.groupby(group_keys, dropna=False)
-        .agg(
-            EventCount=("WaitingSeconds", "size"),
-            TotalWaiting=("WaitingSeconds", "sum"),
-            AvgWaiting=("WaitingSeconds", "mean"),
-            P95Waiting=("WaitingSeconds", pct95),
-            TotalCare=("CareSeconds", "sum"),
-            TotalEmergency=("EmergencySeconds", "sum"),
-            LastEvent=("Start Time", "max") if "Start Time" in df.columns
-                      else ("WaitingSeconds", "size"),
-        )
-        .reset_index()
+    gb.configure_grid_options(
+        enableCellTextSelection=True,
+        domLayout='normal',
+        suppressHorizontalScroll=True,
+        rowHeight=ROW_HEIGHT,
+        headerHeight=HEADER_HEIGHT,
     )
 
-    # ── Call-type counts per room ──
-    call_type_dict: dict[tuple, dict] = {}
-    if "Call Type" in df.columns:
-        for _, r in (
-            df.groupby(group_keys + ["Call Type"], dropna=False)
-            .size()
-            .rename("Count")
-            .reset_index()
-            .iterrows()
-        ):
-            key = (r["HomeName"], r["Room Location"])
-            label = str(r["Call Type"]) if pd.notna(r["Call Type"]) else "Unknown"
-            call_type_dict.setdefault(key, {})[label] = int(r["Count"])
-
-    # ── Render: homes ordered by total events ──
-    homes_order = (
-        agg_df.groupby("HomeName", dropna=False)["EventCount"]
-        .sum()
-        .sort_values(ascending=False)
-        .index.tolist()
+    AgGrid(
+        open_df,
+        gridOptions=gb.build(),
+        custom_css=load_aggrid_css(),
+        allow_unsafe_jscode=True,
+        theme="alpine",
+        height=height,
+        fit_columns_on_grid_load=True,
     )
 
-    for home in homes_order:
-        home_block = (
-            agg_df[agg_df["HomeName"] == home]
-            .sort_values(["EventCount", "TotalWaiting"], ascending=[False, False])
-        )
-        for _, row in home_block.iterrows():
-            room = row["Room Location"]
-            key = (home, room)
-            with st.container(border=True):
-                st.markdown(f"**{home} - {room}** · {int(row['EventCount'])} events")
-                c1, c2, c3, c4, c5 = st.columns(5)
-                c1.metric("Total Waiting Time",   format_seconds(row["TotalWaiting"]))
-                c2.metric("Average Waiting Time", format_seconds(row["AvgWaiting"]))
-                c3.metric("95% Waiting Time",     format_seconds(row["P95Waiting"]))
-                c4.metric("Total Care Time",      format_seconds(row["TotalCare"]))
-                c5.metric("Total Emergency Time", format_seconds(row["TotalEmergency"]))
-
-                pairs = sorted(call_type_dict.get(key, {}).items(), key=lambda x: (-x[1], x[0]))
-                for i in range(0, len(pairs), 6):
-                    row_slice = pairs[i:i + 6]
-                    for col, (label, count) in zip(st.columns(len(row_slice)), row_slice):
-                        col.metric(label, str(count))
 
 # ─────────────────────────────────────────────────────────────────────────────
 # MAIN
@@ -219,7 +120,6 @@ def _render_room_summary(df: pd.DataFrame) -> None:
 try:
     _validate_env()
 
-    # Initialise the SQL client once per session, using the selected backend.
     if "sql_client" not in st.session_state:
         token_provider = get_token_provider(
             config.AZURE_CLIENT_ID,
@@ -233,21 +133,16 @@ try:
         )
 
     st.title("Call Bell – 24‑hour Summary")
-    st.caption("Times are displayed as Hours:Minutes:Seconds")
 
-    df, updated_at = load_data(24)
+    df, updated_at = load_open_calls(24)
 
     if df is None or df.empty:
         st.info("No data found for the last 24 hours.")
         st.stop()
 
     st.caption(f"Refreshed: {updated_at:%d/%m/%y %H:%M:%S}")
-
-    home_name = df.get("HomeName", pd.Series(dtype=str)).dropna().unique()
-    home_name = home_name[0] if len(home_name) else "Home"
-
-    _render_open_calls(df, home_name)
-    _render_room_summary(df)
+    df["Events"] = render_event_pills(df["Events"])
+    _render_open_calls(df)
 
 except Exception as exc:
     _fatal_page(exc)

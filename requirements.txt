@@ -1,4 +1,5 @@
 streamlit
+streamlit-aggrid
 pandas
 mssql-python
 pyodbc
