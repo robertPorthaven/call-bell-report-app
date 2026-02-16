@@ -39,4 +39,4 @@ REQUIRED_VARS: dict[str, str] = {
 #   from db.mssql_client import MssqlClient as SQL_BACKEND
 #   from db.pyodbc_client import PyodbcClient as SQL_BACKEND
 
-from db.pyodbc_client import PyodbcClient as SQL_BACKEND  # noqa: E402  (intentional late import)
+from utils.db.pyodbc_client import PyodbcClient as SQL_BACKEND  # noqa: E402  (intentional late import)

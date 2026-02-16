@@ -11,9 +11,9 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 import config
-from auth.token_provider import get_token_provider
-from utils.pills import render_event_pills
-from utils.components import render_call_grid
+from utils.auth.token_provider import get_token_provider
+from utils.aagrid_dataframe import render_call_grid
+from utils.components import render_event_pills
 
 # Define your color variables
 AMBER = "#f09c2e"
@@ -70,7 +70,7 @@ def _fatal_page(exc: Exception) -> None:
 
 @st.cache_data(show_spinner=True, ttl=5)
 def load_open_calls(hours: int = 24) -> tuple[pd.DataFrame, datetime]:
-    q = f"SELECT * FROM [call_bell].[fn_report_app_data]({int(hours)})"
+    q = f"SELECT*FROM[call_bell].[fn_report_app_open_events](2,'Elizabeth Gardens')"
     df = st.session_state.sql_client.run_query(q)
     return df, datetime.now()
 
@@ -99,10 +99,11 @@ try:
     st.caption(f"Refreshed: {updated_at:%d/%m/%y %H:%M:%S}")
     st.subheader("Active Open Calls")
     # Convert event data to colour coded svgs and then draw the Open Call table
-    df["Events"] = render_event_pills(df["Events"]) 
-    render_call_grid(df, "open_calls_grid", theme_color=AMBER, )
+    df_open_calls = df[["Room Location","Call Type","Start","Total Time","Waiting Time","Care Time","Events"]]
+    df_open_calls["Events"] = render_event_pills(df["Events"]) 
 
-    render_call_grid(df, "ljkasdlksa ldksalk", theme_color=OCEAN)
+    render_call_grid(df_open_calls, "open_calls_grid", theme_color=AMBER, )
+
 
 except Exception as exc:
     _fatal_page(exc)

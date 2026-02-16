@@ -24,8 +24,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Application source
 COPY app.py      /app/
 COPY config.py   /app/
-COPY auth/       /app/auth/
-COPY db/         /app/db/
+COPY utils/         /app/utils/
 COPY assets/     /app/assets/
 COPY .streamlit/ /app/.streamlit/
 

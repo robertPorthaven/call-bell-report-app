@@ -6,5 +6,8 @@
     "azureFunctions.projectRuntime": "~4",
     "debug.internalConsoleOptions": "neverOpen",
     "azureFunctions.projectLanguageModel": 2,
-    "azureAutomation.directory.basePath": "c:\\Users\\Robert.Watkins"
+    "azureAutomation.directory.basePath": "c:\\Users\\Robert.Watkins",
+    "python.analysis.extraPaths": [
+        "./utils"
+    ]
 }
