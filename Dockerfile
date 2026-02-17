@@ -23,10 +23,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Application source
 COPY app.py      /app/
-COPY config.py   /app/
-COPY utils/         /app/utils/
-COPY assets/     /app/assets/
 COPY .streamlit/ /app/.streamlit/
+COPY helper/         /app/helper/
+COPY assets/     /app/assets/
 
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser

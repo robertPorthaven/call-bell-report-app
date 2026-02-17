@@ -3,3 +3,4 @@ streamlit-aggrid
 pandas
 mssql-python
 pyodbc
+sqlalchemy>=2.0
