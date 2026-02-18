@@ -1,64 +1,51 @@
-/* assets/aggrid.css 
-   AgGrid Open Calls grid overrides                          
-   These are loaded programmatically via st_aggrid custom_css */
+/* assets/aggrid.css */
 
-/* Kill the default grey AgGrid outer border that fights with ours */
-.ag-root {
-    border: none;
-}
-
+/* Frame & header */
+.ag-root { border: none; }
 .ag-root-wrapper {
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 2px 4px;   /* add vertical spacing around the grid */
-    border: 4px solid --theme-color--;   /* --amber */
-    background-color: --theme-color--;   /* fills corner gaps with amber */
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 2px 4px;
+  border: 4px solid --theme-color--;
+  background-color: --theme-color--;
 }
-
-.ag-header {
-    background-color: --theme-color--;   /* ensure full header row is amber */
-    border-bottom: none;
-}
-
+.ag-header { background-color: --theme-color--; border-bottom: none; }
 .ag-header-cell {
-    background-color: --theme-color--;   /* --amber */
-    border-right: 1px solid --theme-color--;   /* kill grey dividers between header cells */
+  background-color: --theme-color--;
+  border-right: 1px solid --theme-color--;
 }
-
-.ag-header-cell-label {
-    color: white;
-    font-weight: bold;
-    font-size: 16px;
-}
-
-.ag-row {
-    border-color: --theme-color--;   /* --amber */
-}
-
+.ag-header-cell-label { color: white; font-weight: bold; font-size: 16px; }
+.ag-row { border-color: --theme-color--; }
 .ag-cell {
-    border-right: 1px solid --theme-color--;   /* --amber */
-    font-size: 14px;
+  border-right: 1px solid --theme-color--;
+  font-size: 14px;
 }
 
-/* Events column: single-line horizontal scroll */
+/* Events column: wrap & stack */
 .ag-cell[col-id='Events'] {
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-    display: flex;
-    padding: 0 4px;
-    scrollbar-width: thin; /* Firefox */
+  white-space: normal;
+  overflow: visible;
+  display: block;
+  padding: 4px;
 }
-
-.ag-body-horizontal-scroll {
-    display: none;
+.ag-cell[col-id='Events'] .pill-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  align-content: flex-start;
+  row-gap: 6px;
 }
-
-.ag-scrollbar-phantom {
-    display: none;
+/* Per-pill SVGs */
+.ag-cell[col-id='Events'] .pill-container img {
+  height: 24px;
+  display: inline-block;
+  vertical-align: middle;
 }
-
-/* Prevent white flash at bottom corners */
-.ag-body-viewport {
-    background-color: #ffffff;
+/* Arrow */
+.ag-cell[col-id='Events'] .pill-container .arrow {
+  color: #3e6f86;
+  font-size: 12px;
+  line-height: 24px;
+  margin: 0 6px;
+  user-select: none;
 }

@@ -245,7 +245,7 @@ class SqlThings:
 
         
 
-    def read_tvf(self, schema: str, fn_name: str, *args, user_context: dict[str, str] | None = None  ) -> pd.DataFrame:
+    def read_tvf(self, user_context: dict[str, str], schema: str, fn_name: str, *args) -> pd.DataFrame:
 
         placeholders = ", ".join([f":p{i}" for i in range(len(args))])
         params = {f"p{i}": v for i, v in enumerate(args)}
@@ -264,7 +264,7 @@ class SqlThings:
 
 
     
-    def run_query_df(self, query: str, params: dict | None = None, user_context: dict[str, str] | None = None) -> pd.DataFrame:
+    def run_query_df(self, user_context: dict[str, str], query: str, params: dict | None = None) -> pd.DataFrame:
         if isinstance(query, str):
             sql = text(query) 
             with self.engine.connect() as connection:
