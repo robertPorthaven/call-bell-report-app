@@ -5,8 +5,12 @@ import streamlit as st
 
 # --- Brand colors ---
 AMBER = "#f09c2e"
-SLATE = "#757a6e"
 OCEAN = "#3e6f86"
+SLATE = "#757a6e"
+
+CLOUD = "#ebebeb"
+
+
 
 STYLES = {
     "call":        {"bg": "#ffffff", "border": AMBER, "fg": "#000000"},

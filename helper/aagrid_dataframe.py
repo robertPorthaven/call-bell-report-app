@@ -222,7 +222,7 @@ def render_call_grid(
       - Renderer handles JSON/array/Arrow, no manual row sizing
     """
     if df_in.empty:
-        st.info("No data available.")
+        st.info("None", icon="👍")
         return
 
     df = df_in.copy()
@@ -255,5 +255,5 @@ def render_call_grid(
         allow_unsafe_jscode=True,
         theme="alpine",
         key=unique_key,
-        fit_columns_on_grid_load=False,
+        fit_columns_on_grid_load=True,
     )

@@ -15,6 +15,9 @@ venv/
 .idea/
 *.code-workspace
 
+#--- MINE
+PARK=HERE
+
 # --- VCS & misc
 .git
 .gitignore

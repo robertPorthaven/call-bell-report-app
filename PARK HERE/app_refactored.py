@@ -16,7 +16,7 @@ from helper.data_loader import (
 )
 from helper.metrics_block import render_metrics_block
 
-from helper.filters import render_filters_form
+from components.filters import render_filters_form
 
 SLATE = "#757a6e"
 AMBER = "#f09c2e"
@@ -47,7 +47,8 @@ except FileNotFoundError:
 
 def _fatal_page(exc: Exception) -> None:
     timestamp = datetime.now().strftime("%d/%m/%y %H:%M:%S")
-    st.markdown(f"### 🚨 System Error\n**Time of failure:** {timestamp}")
+    st.markdown(f"### 🚨 System Error 
+**Time of failure:** {timestamp}")
     st.exception(exc)
     st.stop()
 
@@ -57,7 +58,6 @@ def _fatal_page(exc: Exception) -> None:
 try:
     # — Title and refresh slot
     st.title("Call Bell Report", anchor=False)
-    date_range_slot = st.empty()
     refreshed_slot = st.empty()
 
     # — SECTION: Filters in sidebar
@@ -85,20 +85,16 @@ try:
     report_start = st.session_state["filters"]["start"]
     report_end = st.session_state["filters"]["end"]
 
-
     # — SECTION: Home KPIs
     with st.container():
         st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
         df_home_kpis, updated_at = load_home_metrics(report_start, report_end, selected_home)
         refreshed_slot.markdown(f"###### Refreshed: {updated_at:%d/%m/%y %H:%M:%S}")
-        
+        render_metrics_block(df_home_kpis, selected_home, SLATE)  # type: ignore
         row = df_home_kpis[df_home_kpis["Home Name"] == selected_home].iloc[0]
         min_seq_id = int(row["min_seq_id"])
         max_seq_id = int(row["max_seq_id"])
         st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
-        
-
-        render_metrics_block(df_home_kpis, selected_home, SLATE, min_seq_id , max_seq_id)  # type: ignore
 
     # — SECTION: Live Locations
     st.markdown("### Live Locations — (Not Reset)")
@@ -107,7 +103,6 @@ try:
         df_active = load_live_locations(selected_home, min_seq_id, max_seq_id)
         df_active.loc[:, "Events"] = render_event_pills_svgs(df_active["Events"])  # type: ignore
         df_active["Events"] = df_active["Events"].apply(json.dumps)
-        df_active = df_active.loc[:, ["Room Location", "Call Type", "Start", "Total Time", "Waiting Time", "Care Time", "Events"]]
         render_call_grid(df_active, "open_calls_grid", theme_color=AMBER)
         st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
 
@@ -117,13 +112,10 @@ try:
         st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
         df_room_kpis = load_room_metrics(selected_home, min_seq_id, max_seq_id)  # type: ignore
         st.caption("Rooms with no event are not shown.")
-
-        df_room_kpis = df_room_kpis.sort_values(by="total_wait", ascending=False) #--> or 	total_calls , total_emergency ,total_events 
-
         for i in range(len(df_room_kpis)):
             row_df = df_room_kpis.iloc[[i]]
             room = str(row_df.iloc[0, 0])
-            render_metrics_block(row_df, room, selected_home, min_seq_id, max_seq_id, OCEAN)
+            render_metrics_block(row_df, room, OCEAN)
             st.markdown('<div style="height:0.5rem"></div>', unsafe_allow_html=True)
 
 except Exception as exc:

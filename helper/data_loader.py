@@ -76,7 +76,8 @@ etl_processor = SqlThings(
     "call-bell-report-app",
 )
 
-@st.cache_data(show_spinner=True, ttl=1)
+cache_timer_today = 50
+@st.cache_data(show_spinner=True, ttl=cache_timer_today)
 def load_home_metrics(start: datetime, end: datetime, home_name: str | None = None) -> tuple[pd.DataFrame, datetime]:
     df = etl_processor.read_tvf(
         st.session_state["user_context"],   # user_context
@@ -88,15 +89,60 @@ def load_home_metrics(start: datetime, end: datetime, home_name: str | None = No
     )
     return df, datetime.now()
 
-# @st.cache_data(show_spinner=True, ttl=5)
-# def load_open_calls(hours: int = 24) -> tuple[pd.DataFrame, datetime]:
-#     df = etl_processor.read_tvf(
-#         st.session_state["user_context"],
-#         "call_bell",
-#         "fn_report_app_metrics",
-#         2,
-#         "Elizabeth Gardens",
-#         1,
-#         1,  
-#     )
-#     return df, datetime.now()
+@st.cache_data(show_spinner=True, ttl=cache_timer_today)
+def load_homes() -> pd.DataFrame:
+    df = etl_processor.run_query_df(
+        st.session_state["user_context"],   
+        "SELECT*FROM[call_bell].[vw_report_app_list_homes]",     
+    )
+    return df
+
+@st.cache_data(show_spinner=True, ttl=cache_timer_today)
+def load_live_locations(home_name, min_id, max_id) -> pd.DataFrame:
+    df = etl_processor.read_tvf(
+        st.session_state["user_context"],   # user_context
+        "call_bell",                        # schema
+        "fn_report_app_live_locations",      # fn_name
+        2 ,                                 # 2 = Home Level   
+        home_name,                          # @home_name (VARCHAR(256) or None)
+        # min_id,                             # @imin_seq_id INT first event record
+        # max_id                              # @max_seq_id INT
+    )
+    return df
+
+@st.cache_data(show_spinner=True, ttl=cache_timer_today)
+def load_locations(parent, min_id, max_id) -> pd.DataFrame:
+    df = etl_processor.read_tvf(
+        st.session_state["user_context"],   # user_context
+        "call_bell",                        # schema
+        "fn_report_app_list_home_rooms",    # fn_name
+        parent,                             # @home_name (VARCHAR(256) or None)
+        min_id,                             # @imin_seq_id INT first event record
+        max_id                              # @max_seq_id INT
+    )
+    return df
+
+@st.cache_data(show_spinner=True, ttl=cache_timer_today)
+def load_room_metrics(parent, min_id, max_id) -> pd.DataFrame:
+    df = etl_processor.read_tvf(
+        st.session_state["user_context"],   # user_context
+        "call_bell",                        # schema
+        "fn_report_app_room_metrics",       # fn_name
+        parent,                             # @home_name (VARCHAR(256) or None)
+        min_id,                             # @imin_seq_id INT first event record
+        max_id                              # @max_seq_id INT
+    )
+    return df
+
+@st.cache_data(show_spinner=True, ttl=cache_timer_today)
+def load_datalogs(parent, child, min_id, max_id) -> pd.DataFrame:
+    df = etl_processor.read_tvf(
+        st.session_state["user_context"],   # user_context
+        "call_bell",                        # schema
+        "fn_report_app_room_datalog",       # fn_name
+        child,  
+        parent,                              # @home_name (VARCHAR(256) or None)
+        max_id,                              # @max_seq_id INT
+        min_id                              # @imin_seq_id INT first event record
+    )
+    return df
